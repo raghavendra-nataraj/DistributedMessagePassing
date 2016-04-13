@@ -17,42 +17,9 @@
 
 int anyID;
 int num_threads = 0,probeCounter = 0,sortCounter = 0;
-pthread_mutex_t probe_counter_lock,ini_sort_lock,mail_counter_lock;
+pthread_mutex_t probe_counter_lock,ini_sort_lock,mail_counter_lock,shutdown_counter_lock,nid_counter_lock,iniprobe_counter_lock;
 int firstID,lastID,ID1Got = 1;
 mailbox* first_mb;
-/*
- * void tring_protocol_start(mailbox* mb)
- *
- * In this function, students will provide code that will cause the threads to
- * start passing whatever messages they need to to meet the assignment goals.
- *
- */
-void tring_protocol_start(mailbox* mb) {
-	/*
-	 * FIXME
-	 * This function sould contain the code that starts the threads to work.
-	 */
-	probeCounter = 0;
-	message *msg;	
-	msg = NEW_MSG;
-	msg->type = NID;
-	msg->payload.integer = anyID;
-	mailbox_send(mb, msg);
-	//sleep(1);
-	while(probeCounter<num_threads){usleep(10);}
-	probeCounter = 0;
-	//msg = NEW_MSG;
-	msg->type = INIPROBE;
-	mailbox_send(mb, msg);
-	while(probeCounter<(num_threads)){usleep(10);}
-	probeCounter = 0;
-	message *smsg;	
-	smsg = NEW_MSG;
-	smsg->type = INISORT;
-	mailbox_send(mb, smsg);
-	//printf("firstId = %d,lastID=%d\n",firstID,lastID);
-
-}
 
 /*
  * static inline void tring_wait(void)
@@ -61,7 +28,7 @@ void tring_protocol_start(mailbox* mb) {
  * accomplished by waiting on a condition variable.
  *
  */
-static inline void tring_wait(void) {
+void tring_wait(void) {
 	pthread_mutex_lock(&main_signal_lock);
 	pthread_cond_wait(&main_signal, &main_signal_lock);
 	pthread_mutex_unlock(&main_signal_lock);
@@ -79,6 +46,47 @@ void tring_signal(void) {
 	pthread_cond_signal(&main_signal);
 	pthread_mutex_unlock(&main_signal_lock);
 }
+
+/*
+ * void tring_protocol_start(mailbox* mb)
+ *
+ * In this function, students will provide code that will cause the threads to
+ * start passing whatever messages they need to to meet the assignment goals.
+ *
+ */
+void tring_protocol_start(mailbox* mb) {
+	/*
+	 * FIXME
+	 * This function sould contain the code that starts the threads to work.
+	 */
+	printf("Next Id Communication\n");
+	probeCounter = 0;
+	message *msg;	
+	msg = NEW_MSG;
+	msg->type = NID;
+	msg->payload.integer = anyID;
+	mailbox_send(mb, msg);
+	//sleep(1);
+	tring_wait();
+	//while(probeCounter<num_threads){usleep(10);}
+	printf("Probing Starts\n");
+	probeCounter = 0;
+	//msg = NEW_MSG;
+	msg->type = INIPROBE;
+	mailbox_send(mb, msg);
+	tring_wait();
+	//while(probeCounter<num_threads){usleep(10);}
+	printf("Sorting Starts\n");
+	probeCounter = 0;
+	message *smsg;	
+	smsg = NEW_MSG;
+	smsg->type = INISORT;
+	mailbox_send(mb, smsg);
+	//printf("firstId = %d,lastID=%d\n",firstID,lastID);
+
+}
+
+
 
 /*
  * mailbox* spawn_thread(mailbox* previous_mb)
@@ -172,7 +180,9 @@ int main(int argc, char** argv) {
 	pthread_mutex_init(&probe_counter_lock, NULL);
 	pthread_mutex_init(&ini_sort_lock, NULL);
 	pthread_mutex_init(&mail_counter_lock, NULL);
-
+	pthread_mutex_init(&shutdown_counter_lock, NULL);
+	pthread_mutex_init(&nid_counter_lock,NULL);
+	pthread_mutex_init(&iniprobe_counter_lock,NULL);
 	//Initialize the utility functions.
 	ids_init(num_threads);
 	tring_print_init();
@@ -196,8 +206,8 @@ int main(int argc, char** argv) {
 	msg->payload.mb = previous_mb;
 	mailbox_send(first_mb, msg);
 
-	while(probeCounter<num_threads){usleep(10);}
-	
+	//while(probeCounter<num_threads){usleep(10);}
+	tring_wait();
 	printf("Protocol Start\n");
 	/********** Protocol Start Code **********/
 	//Run the start code.
@@ -239,10 +249,11 @@ int main(int argc, char** argv) {
 
 	/*********** Thread Shutdown Code **********/
 	printf("ShutDown Start\n");
+	probeCounter=0;
 	msg = NEW_MSG;
 	msg->type = SHUTDOWN;
 	msg->payload.mb = NULL;
 	mailbox_send(first_mb, msg);
-
+	tring_wait();
 	return 0;
 }

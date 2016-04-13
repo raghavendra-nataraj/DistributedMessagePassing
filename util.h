@@ -20,7 +20,7 @@ int ids_next(void);
 void tring_print(int from, int to);
 void tring_print_finalize(void);
 void tring_print_init(void);
-extern void tring_signal(void);
+void tring_signal(void);
 void pong(int id);
 int pong_check(void);
 int pong_count(void);

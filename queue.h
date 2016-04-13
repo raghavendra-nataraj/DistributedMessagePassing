@@ -8,6 +8,9 @@ extern int num_threads,probeCounter,sortCounter;
 extern pthread_mutex_t probe_counter_lock;
 extern pthread_mutex_t ini_sort_lock;
 extern pthread_mutex_t mail_counter_lock;
+extern pthread_mutex_t shutdown_counter_lock;
+extern pthread_mutex_t nid_counter_lock;
+extern pthread_mutex_t iniprobe_counter_lock;
 extern int firstID,lastID,ID1Got;
 typedef struct queue_node_s {
 	struct queue_node_s* next;

@@ -40,7 +40,9 @@ void* tring_thread_start(void* arg) {
 				next_mb = msg->payload.mb;
 				pthread_mutex_lock(&mail_counter_lock);
 				probeCounter++;
-				pthread_mutex_unlock(&mail_counter_lock);			}
+				pthread_mutex_unlock(&mail_counter_lock);
+				if(probeCounter>=num_threads){tring_signal();}
+			}
 			if(msg->type == PING){
 				pong(id);
 				if(final_mb!=NULL)
@@ -62,7 +64,10 @@ void* tring_thread_start(void* arg) {
 					nextId = msg->payload.integer;
 					msg->payload.integer = id;
 					mailbox_send(next_mb, msg);
+					pthread_mutex_lock(&nid_counter_lock);
 					probeCounter++;
+					pthread_mutex_unlock(&nid_counter_lock);
+					if(probeCounter>=num_threads){tring_signal();}
 				}
 			}
 			if(msg->type == INIPROBE && next_mb!=NULL){
@@ -74,6 +79,7 @@ void* tring_thread_start(void* arg) {
 					pmsg->payload.integer = id;
 					mailbox_send(next_mb, pmsg);
 					iniProbe = 0;
+					//if(probeCounter>=num_threads){tring_signal();}
 				}
 			}	
 			if(msg->type == PROBE && next_mb!=NULL){
@@ -96,6 +102,7 @@ void* tring_thread_start(void* arg) {
 					pthread_mutex_lock(&probe_counter_lock);
 					probeCounter = probeCounter+1;
 					pthread_mutex_unlock(&probe_counter_lock);
+					if(probeCounter>=num_threads){tring_signal();}
 				}
 			}
 			if(msg->type == INISORT && next_mb!=NULL){
@@ -151,6 +158,10 @@ void* tring_thread_start(void* arg) {
 			}
 			if(msg->type == SHUTDOWN && next_mb!=NULL){
 				mailbox_send(next_mb, msg);
+				pthread_mutex_lock(&shutdown_counter_lock);
+				probeCounter++;
+				pthread_mutex_unlock(&shutdown_counter_lock);
+				if(probeCounter>=num_threads){tring_signal();}
 				return NULL;
 			}	
 		}
