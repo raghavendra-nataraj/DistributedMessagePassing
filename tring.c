@@ -66,7 +66,6 @@ void tring_protocol_start(mailbox* mb) {
 	msg->type = NID;
 	msg->payload.integer = anyID;
 	mailbox_send(mb, msg);
-	//sleep(1);
 	tring_wait();
 	//while(probeCounter<num_threads){usleep(10);}
 	printf("Probing Starts\n");
@@ -83,7 +82,9 @@ void tring_protocol_start(mailbox* mb) {
 	smsg->type = INISORT;
 	mailbox_send(mb, smsg);
 	//printf("firstId = %d,lastID=%d\n",firstID,lastID);
-
+	tring_wait();
+	free(msg);
+	free(smsg);
 }
 
 
@@ -214,7 +215,7 @@ int main(int argc, char** argv) {
 	tring_protocol_start(first_mb);
 	//Wait for the threads to finish up their business.
 	//printf("Waiting for protocol\n");
-	tring_wait();
+	
 
 	/********** Finalization Code **********/
 	printf("Pinging Start\n");
@@ -223,6 +224,7 @@ int main(int argc, char** argv) {
 	msg->type = PING;
 	mailbox_send(first_mb, msg);
 	tring_wait();
+	free(msg);
 	//Have the threads print themselves out.
 	printf("Printing Start\n");
 	msg = NEW_MSG;
@@ -230,6 +232,7 @@ int main(int argc, char** argv) {
 	mailbox_send(first_mb, msg);
 	//Wait for the threads to finish ponging and printing.
 	tring_wait();
+	free(msg);
 	printf("Pong Check Start\n");
 	//Check to see if we have a correct solution.
 	if (pong_count() == num_threads) {
@@ -255,5 +258,12 @@ int main(int argc, char** argv) {
 	msg->payload.mb = NULL;
 	mailbox_send(first_mb, msg);
 	tring_wait();
+	free(msg);
+	pthread_mutex_destroy(&probe_counter_lock);
+	pthread_mutex_destroy(&ini_sort_lock);
+	pthread_mutex_destroy(&mail_counter_lock);
+	pthread_mutex_destroy(&shutdown_counter_lock);
+	pthread_mutex_destroy(&nid_counter_lock);
+	pthread_mutex_destroy(&iniprobe_counter_lock);
 	return 0;
 }

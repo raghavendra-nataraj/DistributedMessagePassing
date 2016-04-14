@@ -34,10 +34,12 @@ void* tring_thread_start(void* arg) {
 			message* msg = mailbox_receive(mb);
 			if(msg->type == ID){
 				id = msg->payload.integer;
+				free(msg);
 				//printf("%d\n",id);
 			}
 			if(msg->type == MAILBOX){
 				next_mb = msg->payload.mb;
+				free(msg);
 				pthread_mutex_lock(&mail_counter_lock);
 				probeCounter++;
 				pthread_mutex_unlock(&mail_counter_lock);
@@ -100,6 +102,7 @@ void* tring_thread_start(void* arg) {
 					mailbox_send(next_mb, msg);
 				}else{
 					pthread_mutex_lock(&probe_counter_lock);
+					free(msg);
 					probeCounter = probeCounter+1;
 					pthread_mutex_unlock(&probe_counter_lock);
 					if(probeCounter>=num_threads){tring_signal();}
@@ -107,7 +110,7 @@ void* tring_thread_start(void* arg) {
 			}
 			if(msg->type == INISORT && next_mb!=NULL){
 				pthread_mutex_lock(&ini_sort_lock);
-				if(probeCounter < num_threads){
+				if(probeCounter < num_threads-1){
 					probeCounter+=1;
 					//printf("sent probe %d\n",id);
 					mailbox_send(next_mb, msg);
@@ -140,15 +143,23 @@ void* tring_thread_start(void* arg) {
 					if(newId==nextId && id!=lastID){
 						//printf("Match =%d- %d,%d\n",id,nextId,newId);
 						final_mb = new_mb;
+						free(msg);
+						free(mmsg);
 						sortCounter++;
-						if(sortCounter>(num_threads-1)){
+						if(sortCounter>=(num_threads-1)){
 							//printf("signal =%d\n",sortCounter);
 							tring_signal();
-						}
+						}/*else{
+							printf("Counter =%d\n",sortCounter);
+						}*/
 					}else{
 						if(newId!=id){
+							
 							mailbox_send(next_mb, msg);
 							mailbox_send(next_mb, mmsg);
+						}else{
+							free(msg);
+							free(mmsg);
 						}
 					}
 				}else{
@@ -156,8 +167,10 @@ void* tring_thread_start(void* arg) {
 				}
 				pthread_mutex_unlock(&probe_counter_lock);
 			}
-			if(msg->type == SHUTDOWN && next_mb!=NULL){
-				mailbox_send(next_mb, msg);
+			if(msg->type == SHUTDOWN){
+				if(final_mb!=NULL)
+					mailbox_send(final_mb, msg);
+				free(mb);
 				pthread_mutex_lock(&shutdown_counter_lock);
 				probeCounter++;
 				pthread_mutex_unlock(&shutdown_counter_lock);
