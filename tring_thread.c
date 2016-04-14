@@ -57,7 +57,7 @@ void* tring_thread_start(void* arg) {
 					tring_print(id,nextId);
 					mailbox_send(final_mb, msg);
 				}else{
-					tring_print(id,100);
+					tring_printLast(id);
 					tring_signal();
 				}
 			}

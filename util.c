@@ -111,6 +111,13 @@ void tring_print(int from, int to) {
 
 }
 
+void tring_printLast(int from) {
+	pthread_mutex_lock(&printlock);
+	fprintf(tring_print_file, "\t%d -> NULL;\n", from);
+	pthread_mutex_unlock(&printlock);
+
+}
+
 /*
  * void tring_print_finalize(void)
  *

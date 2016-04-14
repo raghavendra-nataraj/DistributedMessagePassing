@@ -18,6 +18,7 @@ void ids_init(int num);
 int ids_next(void);
 
 void tring_print(int from, int to);
+void tring_printLast(int from);
 void tring_print_finalize(void);
 void tring_print_init(void);
 void tring_signal(void);
