@@ -10,7 +10,7 @@
 #include "queue.h"
 
 #define NEW_MSG	malloc(sizeof(message));
-pthread_mutex_t queuelock;
+extern pthread_mutex_t queuelock;
 typedef struct mailbox_s {
 	queue q;
 } mailbox;

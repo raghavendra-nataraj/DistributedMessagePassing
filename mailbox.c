@@ -5,7 +5,7 @@
 
 #include "mailbox.h"
 #include "queue.h"
-
+pthread_mutex_t queuelock;
 /*
  * void mailbox_init(mailbox* mb)
  *

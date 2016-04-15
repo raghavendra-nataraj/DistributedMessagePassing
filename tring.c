@@ -16,7 +16,7 @@
 #include "util.h"
 
 int anyID;
-int num_threads = 0,probeCounter = 0,sortCounter = 0;
+int num_threads = 0,probeCounter = 0,sortCounter=0;
 pthread_mutex_t probe_counter_lock,ini_sort_lock,mail_counter_lock,shutdown_counter_lock,nid_counter_lock,iniprobe_counter_lock;
 int firstID,lastID,ID1Got = 1;
 mailbox* first_mb;
@@ -34,6 +34,30 @@ void tring_wait(void) {
 	pthread_mutex_unlock(&main_signal_lock);
 }
 
+void tring_nid_wait(void) {
+	pthread_mutex_lock(&nid_signal_lock);
+	pthread_cond_wait(&nid_signal, &nid_signal_lock);
+	pthread_mutex_unlock(&nid_signal_lock);
+}
+
+void tring_probe_wait(void) {
+	pthread_mutex_lock(&probe_signal_lock);
+	pthread_cond_wait(&probe_signal, &probe_signal_lock);
+	pthread_mutex_unlock(&probe_signal_lock);
+}
+
+void tring_sort_wait(void) {
+	pthread_mutex_lock(&sort_signal_lock);
+	pthread_cond_wait(&sort_signal, &sort_signal_lock);
+	pthread_mutex_unlock(&sort_signal_lock);
+}
+
+void tring_ping_wait(void) {
+	pthread_mutex_lock(&ping_signal_lock);
+	pthread_cond_wait(&ping_signal, &ping_signal_lock);
+	pthread_mutex_unlock(&ping_signal_lock);
+}
+
 /*
  * inline void tring_signal(void)
  *
@@ -45,6 +69,28 @@ void tring_signal(void) {
 	pthread_mutex_lock(&main_signal_lock);
 	pthread_cond_signal(&main_signal);
 	pthread_mutex_unlock(&main_signal_lock);
+}
+
+void tring_nid_signal(void) {
+	pthread_mutex_lock(&nid_signal_lock);
+	pthread_cond_signal(&nid_signal);
+	pthread_mutex_unlock(&nid_signal_lock);
+}
+void tring_probe_signal(void) {
+	pthread_mutex_lock(&probe_signal_lock);
+	pthread_cond_signal(&probe_signal);
+	pthread_mutex_unlock(&probe_signal_lock);
+}
+void tring_sort_signal(void) {
+	pthread_mutex_lock(&sort_signal_lock);
+	pthread_cond_signal(&sort_signal);
+	pthread_mutex_unlock(&sort_signal_lock);
+}
+
+void tring_ping_signal(void) {
+	pthread_mutex_lock(&ping_signal_lock);
+	pthread_cond_signal(&ping_signal);
+	pthread_mutex_unlock(&ping_signal_lock);
 }
 
 /*
@@ -66,23 +112,26 @@ void tring_protocol_start(mailbox* mb) {
 	msg->type = NID;
 	msg->payload.integer = anyID;
 	mailbox_send(mb, msg);
-	tring_wait();
+	tring_nid_wait();
 	//while(probeCounter<num_threads){usleep(10);}
 	printf("Probing Starts\n");
 	probeCounter = 0;
+	sortCounter =0;
 	//msg = NEW_MSG;
 	msg->type = INIPROBE;
 	mailbox_send(mb, msg);
-	tring_wait();
+	tring_probe_wait();
 	//while(probeCounter<num_threads){usleep(10);}
 	printf("Sorting Starts\n");
 	probeCounter = 0;
+	sortCounter =0;
 	message *smsg;	
 	smsg = NEW_MSG;
 	smsg->type = INISORT;
 	mailbox_send(mb, smsg);
 	//printf("firstId = %d,lastID=%d\n",firstID,lastID);
-	tring_wait();
+	tring_sort_wait();
+	//while(probeCounter<num_threads){usleep(10);}
 	free(msg);
 	free(smsg);
 }
@@ -175,6 +224,14 @@ int main(int argc, char** argv) {
 	//Initialize the main_signal mutex and CV.
 	pthread_mutex_init(&main_signal_lock, NULL);
 	pthread_cond_init(&main_signal, NULL);
+	pthread_mutex_init(&nid_signal_lock, NULL);
+	pthread_cond_init(&nid_signal, NULL);
+	pthread_mutex_init(&probe_signal_lock, NULL);
+	pthread_cond_init(&probe_signal, NULL);
+	pthread_mutex_init(&sort_signal_lock, NULL);
+	pthread_cond_init(&sort_signal, NULL);
+	pthread_mutex_init(&ping_signal_lock, NULL);
+	pthread_cond_init(&ping_signal, NULL);
 	
 
 	//Probe Counter
@@ -223,16 +280,17 @@ int main(int argc, char** argv) {
 	msg = NEW_MSG;
 	msg->type = PING;
 	mailbox_send(first_mb, msg);
-	tring_wait();
+	tring_ping_wait();
 	free(msg);
 	//Have the threads print themselves out.
 	printf("Printing Start\n");
-	msg = NEW_MSG;
-	msg->type = PRINT;
-	mailbox_send(first_mb, msg);
+	message *pmsg = NEW_MSG;
+	pmsg->type = PRINT;
+	mailbox_send(first_mb, pmsg);
 	//Wait for the threads to finish ponging and printing.
-	tring_wait();
-	free(msg);
+	tring_nid_wait();
+	//sleep(3);
+	free(pmsg);
 	printf("Pong Check Start\n");
 	//Check to see if we have a correct solution.
 	if (pong_count() == num_threads) {
