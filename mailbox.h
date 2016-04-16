@@ -23,8 +23,9 @@ enum mtypes {
 	PROBE,
 	INISORT,
 	SORT,
-	PING,
+	FINILIZE,
 	PRINT,
+	PING,
 	SHUTDOWN
 };
 

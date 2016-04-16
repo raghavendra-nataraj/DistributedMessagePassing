@@ -26,6 +26,7 @@ void tring_nid_signal(void);
 void tring_probe_signal(void);
 void tring_sort_signal(void);
 void tring_ping_signal(void);
+void tring_finilize_signal(void);
 void pong(int id);
 int pong_check(void);
 int pong_count(void);

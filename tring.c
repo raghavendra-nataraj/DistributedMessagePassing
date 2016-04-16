@@ -58,6 +58,13 @@ void tring_ping_wait(void) {
 	pthread_mutex_unlock(&ping_signal_lock);
 }
 
+void tring_finilize_wait(void) {
+	pthread_mutex_lock(&finilize_signal_lock);
+	pthread_cond_wait(&finilize_signal, &finilize_signal_lock);
+	pthread_mutex_unlock(&finilize_signal_lock);
+}
+
+
 /*
  * inline void tring_signal(void)
  *
@@ -91,6 +98,12 @@ void tring_ping_signal(void) {
 	pthread_mutex_lock(&ping_signal_lock);
 	pthread_cond_signal(&ping_signal);
 	pthread_mutex_unlock(&ping_signal_lock);
+}
+
+void tring_finilize_signal(void) {
+	pthread_mutex_lock(&finilize_signal_lock);
+	pthread_cond_signal(&finilize_signal);
+	pthread_mutex_unlock(&finilize_signal_lock);
 }
 
 /*
@@ -133,6 +146,12 @@ void tring_protocol_start(mailbox* mb) {
 	tring_sort_wait();
 	//while(probeCounter<num_threads){usleep(10);}
 	free(msg);
+	free(smsg);
+	printf("Finilizing Starts\n");
+	smsg = NEW_MSG;
+	smsg->type = FINILIZE;
+	mailbox_send(first_mb, smsg);
+	tring_finilize_wait();
 	free(smsg);
 }
 
@@ -232,6 +251,8 @@ int main(int argc, char** argv) {
 	pthread_cond_init(&sort_signal, NULL);
 	pthread_mutex_init(&ping_signal_lock, NULL);
 	pthread_cond_init(&ping_signal, NULL);
+	pthread_mutex_init(&finilize_signal_lock, NULL);
+	pthread_cond_init(&finilize_signal, NULL);
 	
 
 	//Probe Counter
@@ -282,6 +303,7 @@ int main(int argc, char** argv) {
 	mailbox_send(first_mb, msg);
 	tring_ping_wait();
 	free(msg);
+	sleep(1);
 	//Have the threads print themselves out.
 	printf("Printing Start\n");
 	message *pmsg = NEW_MSG;

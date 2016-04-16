@@ -41,7 +41,7 @@ void* tring_thread_start(void* arg) {
 			}
 			if(msg->type == MAILBOX){
 				pthread_mutex_lock(&mail_counter_lock);
-				printf("Hello1");
+				//printf("Hello1");
 				next_mb = msg->payload.mb;
 				free(msg);
 				probeCounter++;
@@ -49,19 +49,19 @@ void* tring_thread_start(void* arg) {
 				pthread_mutex_unlock(&mail_counter_lock);
 			}
 			if(msg->type == PING){
-				printf("Hello7");
+				//printf("Hello7");
 				pong(id);
-				if(final_mb!=NULL)
-					mailbox_send(final_mb, msg);
+				if(next_mb!=NULL)
+					mailbox_send(next_mb, msg);
 				else
 					tring_ping_signal();
 			}
 			if(msg->type == PRINT){
-				printf("Hello8");
-				if(final_mb!=NULL){
+				//printf("Hello8");
+				if(next_mb!=NULL){
 					//printf("%d\n",id);
 					tring_print(id,nextId);
-					mailbox_send(final_mb, msg);
+					mailbox_send(next_mb, msg);
 				}else{
 					//printf("l%d\n",id);
 					tring_printLast(id);
@@ -70,7 +70,7 @@ void* tring_thread_start(void* arg) {
 			}
 			if(msg->type == NID && next_mb!=NULL){
 				pthread_mutex_lock(&nid_counter_lock);
-				printf("Hello2");
+				//printf("Hello2");
 				if(probeCounter<num_threads){
 					//printf("nid\n");
 					nextId = msg->payload.integer;
@@ -84,7 +84,7 @@ void* tring_thread_start(void* arg) {
 			}
 			if(msg->type == INIPROBE && next_mb!=NULL){
 				pthread_mutex_lock(&probe_counter_lock);
-				printf("Hello3");
+				//printf("Hello3");
 				if(probeCounter<num_threads && iniprobe){
 					if(probeCounter<(num_threads-1))
 						mailbox_send(next_mb, msg);
@@ -102,7 +102,7 @@ void* tring_thread_start(void* arg) {
 			}	
 			if(msg->type == PROBE && next_mb!=NULL){
 				pthread_mutex_lock(&nid_counter_lock);
-				printf("Hello4");
+				//printf("Hello4");
 				int newId = msg->payload.integer;
 				if(id>lastID){
 					lastID = id;
@@ -129,7 +129,7 @@ void* tring_thread_start(void* arg) {
 			}
 			if(msg->type == INISORT && next_mb!=NULL){
 				pthread_mutex_lock(&ini_sort_lock);
-				printf("Hello5");
+				//printf("Hello5");
 				//printf("iniSort=%d\n",probeCounter);
 				if(probeCounter<num_threads){
 					probeCounter++;
@@ -149,7 +149,7 @@ void* tring_thread_start(void* arg) {
 			}
 			if(msg->type == SORT && next_mb!=NULL){
 				pthread_mutex_lock(&ini_sort_lock);
-				printf("Hello6");
+				//printf("Hello6");
 				int newId = msg->payload.integer;
 				if(id == lastID){
 					final_mb = NULL;
@@ -190,9 +190,17 @@ void* tring_thread_start(void* arg) {
 				}
 				pthread_mutex_unlock(&ini_sort_lock);
 			}
+			if(msg->type == FINILIZE){
+				next_mb = final_mb;
+				if(next_mb!=NULL)
+					mailbox_send(next_mb,msg);
+				else
+					tring_finilize_signal();
+			
+			}
 			if(msg->type == SHUTDOWN){
-				if(final_mb!=NULL)
-					mailbox_send(final_mb, msg);
+				if(next_mb!=NULL)
+					mailbox_send(next_mb, msg);
 				free(mb);
 				pthread_mutex_lock(&shutdown_counter_lock);
 				probeCounter++;

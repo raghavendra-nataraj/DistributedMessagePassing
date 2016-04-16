@@ -26,4 +26,7 @@ pthread_mutex_t sort_signal_lock;
 pthread_cond_t ping_signal;
 pthread_mutex_t ping_signal_lock;
 
+pthread_cond_t finilize_signal;
+pthread_mutex_t finilize_signal_lock;
+
 #endif
