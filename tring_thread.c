@@ -22,7 +22,7 @@ void* tring_thread_start(void* arg) {
 	int id,nextId;
 	mailbox* mb, * next_mb=NULL,*final_mb = NULL;
 	mb = (mailbox*)arg;
-	int iniprobe = 1;
+	int iniprobe = 1,inisort = 1;
 	
 	/*
 	 * FIXME
@@ -33,10 +33,10 @@ void* tring_thread_start(void* arg) {
 		if(!queue_is_empty(&mb->q)){
 			message* msg = mailbox_receive(mb);
 			if(msg->type == ID){
-				pthread_mutex_lock(&nid_counter_lock);
+				pthread_mutex_lock(&id_counter_lock);
 				id = msg->payload.integer;
 				free(msg);
-				pthread_mutex_unlock(&nid_counter_lock);
+				pthread_mutex_unlock(&id_counter_lock);
 				//printf("%d\n",id);
 			}
 			if(msg->type == MAILBOX){
@@ -44,8 +44,8 @@ void* tring_thread_start(void* arg) {
 				//printf("Hello1");
 				next_mb = msg->payload.mb;
 				free(msg);
-				probeCounter++;
-				if(probeCounter>=num_threads){tring_signal();}
+				mailboxCounter++;
+				if(mailboxCounter>=num_threads){tring_signal();}
 				pthread_mutex_unlock(&mail_counter_lock);
 			}
 			if(msg->type == PING){
@@ -71,48 +71,51 @@ void* tring_thread_start(void* arg) {
 			if(msg->type == NID && next_mb!=NULL){
 				pthread_mutex_lock(&nid_counter_lock);
 				//printf("Hello2");
-				if(probeCounter<num_threads){
+				if(nidcounter<num_threads){
 					//printf("nid\n");
 					nextId = msg->payload.integer;
 					msg->payload.integer = id;
 					mailbox_send(next_mb, msg);
-					probeCounter++;
+					nidcounter++;
 				}else{
 					tring_nid_signal();
 				}
 				pthread_mutex_unlock(&nid_counter_lock);
 			}
 			if(msg->type == INIPROBE && next_mb!=NULL){
-				pthread_mutex_lock(&probe_counter_lock);
+				pthread_mutex_lock(&iniprobe_counter_lock);
 				//printf("Hello3");
-				if(probeCounter<num_threads && iniprobe){
-					if(probeCounter<(num_threads-1))
+				if(iniprobeCounter<num_threads && iniprobe){
+					if(iniprobeCounter<(num_threads-1))
 						mailbox_send(next_mb, msg);
-					//printf("iniprobe=%d,%d\n",id,probeCounter);
+					//printf("iniprobe=%d,%d\n",id,iniprobeCounter);
 					message *pmsg;	
 					pmsg = NEW_MSG;
 					pmsg->type = PROBE;
 					pmsg->payload.integer = id;
 					mailbox_send(next_mb, pmsg);
-					probeCounter++;
+					iniprobeCounter++;
 					iniprobe = 0;
 				}
-				pthread_mutex_unlock(&probe_counter_lock);
+				if(iniprobeCounter>=(num_threads))
+						pthread_mutex_unlock(&probe_counter_lock);
+					
+				pthread_mutex_unlock(&iniprobe_counter_lock);
 
 			}	
 			if(msg->type == PROBE && next_mb!=NULL){
-				pthread_mutex_lock(&nid_counter_lock);
+				pthread_mutex_lock(&probe_counter_lock);
 				//printf("Hello4");
 				int newId = msg->payload.integer;
 				if(id>lastID){
 					lastID = id;
 				}
 				if(newId != id){
-					if((nextId > id && newId > id && newId < nextId) || (id > nextId && newId > id)){
+					if((nextId > id && newId > id && newId < nextId) || (id >= nextId && newId > id)){
 					int temp;
 					temp = nextId;
 					nextId = newId;
-					newId = temp;
+					//newId = temp;
 					}
 					
 					msg->payload.integer = newId;
@@ -121,19 +124,21 @@ void* tring_thread_start(void* arg) {
 				}else{
 					//printf("%d,%d,%d\n",id,nextId,newId);
 					free(msg);
-					//printf("Probe Counter = %d\n",sortCounter);
-					sortCounter++;
-					if(sortCounter>=(num_threads)){tring_probe_signal();}
+					//printf("Probe Counter = %d\n",probeCounter);
+					probeCounter++;
+					if(probeCounter>=(num_threads)){tring_probe_signal();}
 				}
-				pthread_mutex_unlock(&nid_counter_lock);
+				pthread_mutex_unlock(&probe_counter_lock);
 			}
 			if(msg->type == INISORT && next_mb!=NULL){
 				pthread_mutex_lock(&ini_sort_lock);
 				//printf("Hello5");
-				//printf("iniSort=%d\n",probeCounter);
-				if(probeCounter<num_threads){
-					probeCounter++;
-					mailbox_send(next_mb, msg);
+				if(iniSortCounter<num_threads && inisort){
+					//printf("iniSort=%d\n",iniSortCounter);
+					if(iniSortCounter<(num_threads-1))
+						mailbox_send(next_mb, msg);
+					iniSortCounter++;
+					inisort = 0;
 					message *somsg;	
 					somsg = NEW_MSG;
 					somsg->type = SORT;
@@ -145,10 +150,12 @@ void* tring_thread_start(void* arg) {
 					smsg->payload.mb = mb;
 					mailbox_send(next_mb, smsg);
 				}
+				if(iniSortCounter>=(num_threads))
+						pthread_mutex_unlock(&sort_lock);
 				pthread_mutex_unlock(&ini_sort_lock);
 			}
 			if(msg->type == SORT && next_mb!=NULL){
-				pthread_mutex_lock(&ini_sort_lock);
+				pthread_mutex_lock(&sort_lock);
 				//printf("Hello6");
 				int newId = msg->payload.integer;
 				if(id == lastID){
@@ -164,31 +171,25 @@ void* tring_thread_start(void* arg) {
 					if(newId==nextId && id!=lastID){
 						//printf("Match =%d- %d,%d\n",id,nextId,newId);
 						final_mb = new_mb;
+						//mailbox_send(next_mb, msg);
+						//mailbox_send(next_mb, mmsg);
+					}
+					if(newId==id){	
+						//printf("SSort=%d,%d\n",id,newId);
+						sortCounter++;
+						if(sortCounter>=(num_threads)){
+							tring_sort_signal();
+						}
+						free(msg);
+						free(mmsg);
+					}else{
 						mailbox_send(next_mb, msg);
 						mailbox_send(next_mb, mmsg);
-					}else{
-						//if(newId!=id){
-						//if(id!=lastID){	
-						//	mailbox_send(next_mb, msg);
-						//	mailbox_send(next_mb, mmsg);
-						//}//else{
-						if(newId==id){	
-							//printf("SSort=%d,%d\n",id,newId);
-							sortCounter++;
-							if(sortCounter>(num_threads-1)){
-								tring_sort_signal();
-							}
-							free(msg);
-							free(mmsg);
-						}else{
-							mailbox_send(next_mb, msg);
-							mailbox_send(next_mb, mmsg);
-						}
 					}
 				}else{
 					printf("Error=%d,%d\n",id,mmsg->type);
 				}
-				pthread_mutex_unlock(&ini_sort_lock);
+				pthread_mutex_unlock(&sort_lock);
 			}
 			if(msg->type == FINILIZE){
 				next_mb = final_mb;
@@ -203,9 +204,9 @@ void* tring_thread_start(void* arg) {
 					mailbox_send(next_mb, msg);
 				free(mb);
 				pthread_mutex_lock(&shutdown_counter_lock);
-				probeCounter++;
+				shutdownCounter++;
 				pthread_mutex_unlock(&shutdown_counter_lock);
-				if(probeCounter>=num_threads){tring_signal();}
+				if(shutdownCounter>=num_threads){tring_signal();}
 				return NULL;
 			}	
 		}

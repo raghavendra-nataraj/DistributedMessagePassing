@@ -16,8 +16,10 @@
 #include "util.h"
 
 int anyID;
-int num_threads = 0,probeCounter = 0,sortCounter=0;
-pthread_mutex_t probe_counter_lock,ini_sort_lock,mail_counter_lock,shutdown_counter_lock,nid_counter_lock,iniprobe_counter_lock;
+int num_threads = 0;
+volatile int mailboxCounter=0,shutdownCounter=0,nidcounter=0, iniprobeCounter = 0,probeCounter,iniSortCounter = 0,sortCounter=0;
+pthread_mutex_t id_counter_lock,mail_counter_lock,nid_counter_lock,iniprobe_counter_lock,probe_counter_lock,
+ini_sort_lock,sort_lock,shutdown_counter_lock;
 int firstID,lastID,ID1Got = 1;
 mailbox* first_mb;
 
@@ -127,6 +129,7 @@ void tring_protocol_start(mailbox* mb) {
 	mailbox_send(mb, msg);
 	tring_nid_wait();
 	//while(probeCounter<num_threads){usleep(10);}
+	pthread_mutex_lock(&probe_counter_lock);
 	printf("Probing Starts\n");
 	probeCounter = 0;
 	sortCounter =0;
@@ -135,6 +138,7 @@ void tring_protocol_start(mailbox* mb) {
 	mailbox_send(mb, msg);
 	tring_probe_wait();
 	//while(probeCounter<num_threads){usleep(10);}
+	pthread_mutex_lock(&sort_lock);
 	printf("Sorting Starts\n");
 	probeCounter = 0;
 	sortCounter =0;
