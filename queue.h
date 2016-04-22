@@ -5,7 +5,7 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 extern int num_threads;
-extern volatile int mailboxCounter,shutdownCounter,nidcounter,probeCounter,sortCounter,iniprobeCounter,probeCounter,iniSortCounter;
+extern volatile int probeCounter;
 extern pthread_mutex_t probe_counter_lock;
 extern pthread_mutex_t ini_sort_lock;
 extern pthread_mutex_t mail_counter_lock;
